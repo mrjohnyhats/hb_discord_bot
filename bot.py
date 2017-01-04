@@ -2,7 +2,7 @@ from league import League
 from riotwatcher import LoLException
 from discord.ext import commands
 from gtts import gTTS
-import riotwatcher, discord, asyncio, random, os, sys
+import riotwatcher, discord, asyncio, random, os, sys, pydub, re
 
 league = League()
 
@@ -12,6 +12,59 @@ MY_ID = "171332734130716673"
 PRANAV_ID = "171332734130716673"
 OOSHERS_ID = "175784723715588107"
 TOKEN = "MjY2MzE2NTA1ODA3OTc4NDk3.C076GQ.58m6_4MyFg5LtIpUNVb3wMQrK5k"
+LANGS = [
+"af",
+"sq",
+"ar",
+"hy",
+"bn",
+"ca",
+"zh",
+"zh-cn",
+"zh-tw",
+"zh-yue",
+"hr",
+"cs",
+"da",
+"nl",
+"en",
+"en-au",
+"en-uk",
+"en-us",
+"eo",
+"fi",
+"fr",
+"de",
+"el",
+"hi",
+"hu",
+"is",
+"id",
+"it",
+"ja",
+"ko",
+"la",
+"lv",
+"mk",
+"no",
+"pl",
+"pt",
+"pt-br",
+"ro",
+"ru",
+"sr",
+"sk",
+"es",
+"es-es",
+"es-us",
+"sw",
+"sv",
+"ta",
+"th",
+"tr",
+"vi",
+"cy"
+]
 
 ADMINS = {
 	MY_ID: ["*"],
@@ -28,12 +81,21 @@ def is_admin(id : str, server_id : str):
 		return True
 	return False
 
-def make_tts(words, lang):
+def make_tts(words, lang, reverse, speed):
 	if os.path.isfile("tts.mp3"):
 		os.remove("tts.mp3")
 
 	speech = gTTS(text=words, lang=lang)
 	speech.save("tts.mp3")
+
+	if reverse or speed != 1.0:
+		segs = pydub.AudioSegment.from_mp3("tts.mp3")
+		if reverse:
+			segs = segs.reverse()
+
+		if speed != 1.0:
+			segs = segs.speedup(playback_speed=speed)
+		segs.export("tts.mp3", format="mp3")
 
 @asyncio.coroutine
 def be_jianyang(msg):
@@ -93,7 +155,7 @@ def stop(ctx):
 
 @bot.command(pass_context=True)
 @asyncio.coroutine
-def say(ctx, words, lang="en"):
+def say(ctx, words, args=""):
 	if len(words) == 0:
 		yield from bot.say("please give me a string of words to say")
 		return False
@@ -101,10 +163,47 @@ def say(ctx, words, lang="en"):
 	try:
 		yield from join_vchan.callback(ctx)
 	except discord.InvalidArgument:
-		yield from bot.say("not a valid voice channel :\\")
+		yield from bot.say("not a valid voice channel :/")
 		return False
 
-	make_tts(words, lang)
+	reverse = False
+	if args.find("reverse=True") != -1:
+		reverse = True
+
+	lang = "en"
+	if re.search("lang=\w+", args) != None:
+		lang_start_i = re.search("lang=", args).end()
+		lang_end_i = args.find(" ", lang_start_i)
+		if lang_end_i == -1:
+			lang_end_i = len(args)
+		lang = args[lang_start_i:lang_end_i]
+
+		if not lang in LANGS:
+			bot.say(lang + " is not a valid language :/")
+			lang = "en"
+
+	speed = 1.0
+	if re.search("speed=\d+(\.\d+)?", args) != None:
+		speed_start_i = re.search("speed=", args).end()
+		speed_end_i = args.find(" ", speed_start_i)
+		if speed_end_i == -1:
+			speed_end_i = len(args)
+
+		#set speed here so that we can send a good error message later
+		speed = args[speed_start_i:speed_end_i]
+
+		try:
+			speed = float(speed)
+		except ValueError:
+			yield from bot.say(speed + " is not a valid speed (valid speeds can be parsed as floats)")
+			speed = 1.0
+		else:
+			if speed < 1.0:
+				yield from bot.say("speed has to be greater than 1 due to the pydub library being dumb :/")
+				speed = 1.0
+
+	make_tts(words, lang, reverse, speed)
+
 	try:
 		player = voice_client.create_ffmpeg_player("tts.mp3")
 	except Exception as e:
