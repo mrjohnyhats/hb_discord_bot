@@ -73,7 +73,7 @@ ADMINS = {
 
 voice_client = None
 
-queue = []
+tts_systems = {}
 
 if not discord.opus.is_loaded():
 	discord.opus.load_opus("opus")
@@ -129,6 +129,10 @@ def join_vchan(ctx):
 		if voice_client is None:
 			voice_client = yield from bot.join_voice_channel(chan)
 		else:
+			if ctx.message.server.id != voice_client.server.id:
+				yield from voice_client.disconnect()
+				voice_client = None
+				yield from join_vchan.callback(ctx)
 			yield from voice_client.move_to(chan)
 
 @bot.command(pass_context=True)
@@ -152,8 +156,13 @@ def say(ctx, words, args=""):
 		yield from bot.say("not a valid voice channel :/")
 		return False
 
+	if not ctx.message.server.id in tts_systems:
+		tts_systems[ctx.message.server.id] = tts.Tts_system(ctx.message.server.id)
+
+	tts_system = tts_systems[ctx.message.server.id]
+
 	parsed_args = yield from tts.get_tts_args(args)
-	tts.play(words, voice_client, parsed_args)
+	tts_system.play(words, voice_client, parsed_args)
 
 @bot.command()
 @asyncio.coroutine
