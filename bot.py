@@ -2,7 +2,7 @@ from league import League
 from riotwatcher import LoLException
 from discord.ext import commands
 from gtts import gTTS
-import riotwatcher, discord, asyncio, random, os, sys, pydub, re
+import riotwatcher, discord, asyncio, random, os, sys, pydub, re, tts
 
 league = League()
 
@@ -73,6 +73,8 @@ ADMINS = {
 
 voice_client = None
 
+queue = []
+
 if not discord.opus.is_loaded():
 	discord.opus.load_opus("opus")
 
@@ -80,22 +82,6 @@ def is_admin(id : str, server_id : str):
 	if ADMINS[id] == "*" or server_id in ADMINS[id]:
 		return True
 	return False
-
-def make_tts(words, lang, reverse, speed):
-	if os.path.isfile("tts.mp3"):
-		os.remove("tts.mp3")
-
-	speech = gTTS(text=words, lang=lang)
-	speech.save("tts.mp3")
-
-	if reverse or speed != 1.0:
-		segs = pydub.AudioSegment.from_mp3("tts.mp3")
-		if reverse:
-			segs = segs.reverse()
-
-		if speed != 1.0:
-			segs = segs.speedup(playback_speed=speed)
-		segs.export("tts.mp3", format="mp3")
 
 @asyncio.coroutine
 def be_jianyang(msg):
@@ -166,51 +152,8 @@ def say(ctx, words, args=""):
 		yield from bot.say("not a valid voice channel :/")
 		return False
 
-	reverse = False
-	if args.find("reverse=True") != -1:
-		reverse = True
-
-	lang = "en"
-	if re.search("lang=\w+", args) != None:
-		lang_start_i = re.search("lang=", args).end()
-		lang_end_i = args.find(" ", lang_start_i)
-		if lang_end_i == -1:
-			lang_end_i = len(args)
-		lang = args[lang_start_i:lang_end_i]
-
-		if not lang in LANGS:
-			bot.say(lang + " is not a valid language :/")
-			lang = "en"
-
-	speed = 1.0
-	if re.search("speed=\d+(\.\d+)?", args) != None:
-		speed_start_i = re.search("speed=", args).end()
-		speed_end_i = args.find(" ", speed_start_i)
-		if speed_end_i == -1:
-			speed_end_i = len(args)
-
-		#set speed here so that we can send a good error message later
-		speed = args[speed_start_i:speed_end_i]
-
-		try:
-			speed = float(speed)
-		except ValueError:
-			yield from bot.say(speed + " is not a valid speed (valid speeds can be parsed as floats)")
-			speed = 1.0
-		else:
-			if speed < 1.0:
-				yield from bot.say("speed has to be greater than 1 due to the pydub library being dumb :/")
-				speed = 1.0
-
-	make_tts(words, lang, reverse, speed)
-
-	try:
-		player = voice_client.create_ffmpeg_player("tts.mp3")
-	except Exception as e:
-		yield from bot.say("an error occured creating the player {0}: {1}".format(type(e).__name__, e))
-	else:
-		player.start()
-
+	parsed_args = yield from tts.get_tts_args(args)
+	tts.play(words, voice_client, parsed_args)
 
 @bot.command()
 @asyncio.coroutine
