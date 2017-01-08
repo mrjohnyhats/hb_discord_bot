@@ -7,6 +7,8 @@ def __init__(server_id):
 
 queue = []
 playing = False
+LANGS = ["af","sq","ar","hy","bn","ca","zh","zh-cn","zh-tw","zh-yue","hr","cs","da","nl","en","en-au","en-uk","en-us","eo","fi","fr","de","el","hi","hu","is","id","it","ja","ko","la","lv","mk","no","pl","pt","pt-br","ro","ru","sr","sk","es","es-es","es-us","sw","sv","ta","th","tr","vi","cy"]
+
 
 def play(words, voice_client, tts_args):
 	add_tts(words, voice_client, tts_args)
