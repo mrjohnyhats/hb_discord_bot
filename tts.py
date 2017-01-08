@@ -1,50 +1,49 @@
 import os, pydub, re
 from gtts import gTTS
 
-class Tts_system:
+ 
+def __init__(server_id):
+	server_id = server_id
 
-	def __init__(self, server_id):
-		self.server_id = server_id
+queue = []
+playing = False
 
-	queue = []
-	playing = False
+def play(words, voice_client, tts_args):
+	add_tts(words, voice_client, tts_args)
+	if not playing:
+		play_if_enqueued()
 
-	def play(self, words, voice_client, tts_args):
-		self.add_tts(words, voice_client, tts_args)
-		if not self.playing:
-			self.play_if_enqueued()
+def add_tts(words, voice_client, tts_args):
+	queue.append(make_tts_player(words, tts_args["lang"], tts_args["reverse"], tts_args["speed"], voice_client))
 
-	def add_tts(self, words, voice_client, tts_args):
-		self.queue.append(self.make_tts_player(words, tts_args["lang"], tts_args["reverse"], tts_args["speed"], voice_client))
+def play_if_enqueued():
+	global playing
+	if len(queue) > 0:
+		playing = True
+		cur_player = queue.pop(0)
+		cur_player.start()
+	else:
+		playing = False
+		for name in os.listdir("./tts_audio"):
+			os.remove("tts_audio/"+name)
 
-	def play_if_enqueued(self):
-		global playing
-		if len(self.queue) > 0:
-			self.playing = True
-			cur_player = self.queue.pop(0)
-			cur_player.start()
-		else:
-			self.playing = False
-			for name in os.listdir("./tts_audio"):
-				os.remove("tts_audio/"+name)
+def make_tts_player(words, lang, reverse, speed, voice_client):
+	filenum = len([name for name in os.listdir('./tts_audio') if os.path.isfile(name)])
+	filename = "tts_audio/tts{0}.mp3".format(filenum)
 
-	def make_tts_player(self, words, lang, reverse, speed, voice_client):
-		filenum = len([name for name in os.listdir('./tts_audio') if os.path.isfile(name)])
-		filename = "tts_audio/tts{0}.mp3".format(filenum)
+	speech = gTTS(text=words, lang=lang)
+	speech.save(filename)
 
-		speech = gTTS(text=words, lang=lang)
-		speech.save(filename)
+	if reverse or speed != 1.0:
+		segs = pydub.AudioSegment.from_mp3(filename)
+		if reverse:
+			segs = segs.reverse()
 
-		if reverse or speed != 1.0:
-			segs = pydub.AudioSegment.from_mp3(filename)
-			if reverse:
-				segs = segs.reverse()
+		if speed != 1.0:
+			segs = segs.speedup(playback_speed=speed)
+		segs.export(filename, format="mp3")
 
-			if speed != 1.0:
-				segs = segs.speedup(playback_speed=speed)
-			segs.export(filename, format="mp3")
-
-		return voice_client.create_ffmpeg_player(filename, after=self.play_if_enqueued)
+	return voice_client.create_ffmpeg_player(filename, after=play_if_enqueued)
 
 def get_tts_args(args):
 	reverse = False
