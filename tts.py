@@ -1,37 +1,21 @@
 import os, pydub, re
 from gtts import gTTS
+from sound_system import Sound_system
 
- 
-def __init__(server_id):
-	server_id = server_id
-
-queue = []
-playing = False
 LANGS = ["af","sq","ar","hy","bn","ca","zh","zh-cn","zh-tw","zh-yue","hr","cs","da","nl","en","en-au","en-uk","en-us","eo","fi","fr","de","el","hi","hu","is","id","it","ja","ko","la","lv","mk","no","pl","pt","pt-br","ro","ru","sr","sk","es","es-es","es-us","sw","sv","ta","th","tr","vi","cy"]
 
-
-def play(words, voice_client, tts_args):
-	add_tts(words, voice_client, tts_args)
-	if not playing:
-		play_if_enqueued()
-
-def add_tts(words, voice_client, tts_args):
-	queue.append(make_tts_player(words, tts_args["lang"], tts_args["reverse"], tts_args["speed"], voice_client))
-
-def play_if_enqueued():
-	global playing
-	if len(queue) > 0:
-		playing = True
-		cur_player = queue.pop(0)
-		cur_player.start()
+def make_tts_file(words, parsed_args, server_id):
+	if not os.path.exists("./tts_audio/"+server_id):
+		os.makedirs("./tts_audio/"+server_id)
+		filenum = 0
 	else:
-		playing = False
-		for name in os.listdir("./tts_audio"):
-			os.remove("tts_audio/"+name)
+		filenum = len([name for name in os.listdir("./tts_audio/"+server_id) if os.path.isfile(name)])
 
-def make_tts_player(words, lang, reverse, speed, voice_client):
-	filenum = len([name for name in os.listdir('./tts_audio') if os.path.isfile(name)])
-	filename = "tts_audio/tts{0}.mp3".format(filenum)
+	filename = "tts_audio/{0}/tts{1}.mp3".format(server_id, filenum)
+
+	lang = parsed_args["lang"]
+	reverse = parsed_args["reverse"]
+	speed = parsed_args["speed"]
 
 	speech = gTTS(text=words, lang=lang)
 	speech.save(filename)
@@ -45,9 +29,10 @@ def make_tts_player(words, lang, reverse, speed, voice_client):
 			segs = segs.speedup(playback_speed=speed)
 		segs.export(filename, format="mp3")
 
-	return voice_client.create_ffmpeg_player(filename, after=play_if_enqueued)
+	return filename
 
-def get_tts_args(args):
+
+def parse_args(args):
 	reverse = False
 	if args.find("reverse=True") != -1:
 		reverse = True

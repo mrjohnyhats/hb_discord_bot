@@ -2,6 +2,7 @@ from league import League
 from riotwatcher import LoLException
 from discord.ext import commands
 from gtts import gTTS
+from sound_system import Sound_system
 import riotwatcher, discord, asyncio, random, os, sys, pydub, re, tts
 
 league = League()
@@ -19,7 +20,12 @@ ADMINS = {
 	PRANAV_ID: [OOSHERS_ID]
 }
 
-voice_client = None
+class Server_sound:
+	def __init__(self, voice_client):
+		self.sound_sys = Sound_system(voice_client)
+		self.voice_client = voice_client
+
+server_sounds = {}
 
 if not discord.opus.is_loaded():
 	discord.opus.load_opus("opus")
@@ -58,28 +64,44 @@ def toggle_jianyang(ctx):
 
 @bot.command(pass_context=True)
 @asyncio.coroutine
+def sound(ctx, file : str):
+	filename = "recording/{0}.mp3".format(file)
+	if not os.path.exists(filename):
+		yield from bot.say(file + ".mp3 is not a recording file")
+	else:
+		yield from join_vchan.callback(ctx)
+
+		server_id = ctx.message.author.server.id
+
+		server_sounds[server_id].sound_sys.play(filename)
+
+@bot.command(pass_context=True)
+@asyncio.coroutine
 def join_vchan(ctx):
-	global voice_client
+	global server_sounds
+
 	if type(ctx.message.author).__name__ is "User":
 		member = ctx.message.server.get_member(ctx.message.author.id)
 		if member == None:
 			yield from bot.say("the server doesn't see you as a member :\\")
 			return False
 		chan = member.voice_channel
+		server_id = member.server.id
 	else:
 		chan = ctx.message.author.voice_channel
+		server_id = ctx.message.author.server.id
 
 	if chan is None:
 		yield from bot.say("please join a voice channel before asking me to join one with you")
 	else:
-		if voice_client is None:
-			voice_client = yield from bot.join_voice_channel(chan)
-		else:
-			if ctx.message.server.id != voice_client.server.id:
-				yield from voice_client.disconnect()
-				voice_client = None
-				yield from join_vchan.callback(ctx)
-			yield from voice_client.move_to(chan)
+		try:
+			if not server_id in server_sounds:
+				vclient = yield from bot.join_voice_channel(chan)
+				server_sounds[server_id] = Server_sound(vclient)
+			else:
+				yield from server_sounds[server_id].voice_client.move_to(chan)
+		except discord.InvalidArgument:
+			yield from bot.say("not a valid voice channel :/")
 
 @bot.command(pass_context=True)
 @asyncio.coroutine
@@ -92,18 +114,16 @@ def stop(ctx):
 @bot.command(pass_context=True)
 @asyncio.coroutine
 def say(ctx, words, args=""):
-	if len(words) == 0:
-		yield from bot.say("please give me a string of words to say")
-		return False
+	yield from join_vchan.callback(ctx)
 
-	try:
-		yield from join_vchan.callback(ctx)
-	except discord.InvalidArgument:
-		yield from bot.say("not a valid voice channel :/")
-		return False
+	server_id = ctx.message.author.server.id
+	parsed_args = yield from tts.parse_args(args)
+	filename = tts.make_tts_file(words, parsed_args, server_id)
 
-	parsed_args = yield from tts.get_tts_args(args)
-	tts.play(words, voice_client, parsed_args)
+	def delete_file():
+		os.remove(filename)
+
+	server_sounds[server_id].sound_sys.play(filename, custom_after=delete_file)
 
 @bot.command()
 @asyncio.coroutine
