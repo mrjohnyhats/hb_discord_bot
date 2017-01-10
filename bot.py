@@ -138,7 +138,7 @@ def stopbot(ctx):
 
 @bot.command(pass_context=True)
 @asyncio.coroutine
-def say_sound(ctx, words, args=""):
+def saysound(ctx, words, args=""):
 	yield from join_vchan.callback(ctx)
 
 	server_id = ctx.message.author.server.id
