@@ -22,7 +22,13 @@ ADMINS = {
 
 class Server_sound:
 	def __init__(self, voice_client):
-		self.sound_sys = Sound_system(voice_client)
+		def after_queue(sound_sys):
+			server_id = sound_sys.voice_client.server.id
+			for name in os.listdir("./tts_audio/"+server_id):
+				if os.path.isfile("./tts_audio/{0}/{1}".format(server_id, name)):
+					os.remove("./tts_audio/{0}/{1}".format(server_id, name))
+
+		self.sound_sys = Sound_system(voice_client, after_queue=after_queue)
 		self.voice_client = voice_client
 
 server_sounds = {}
@@ -34,6 +40,16 @@ def is_admin(id : str, server_id : str):
 	if ADMINS[id] == "*" or server_id in ADMINS[id]:
 		return True
 	return False
+
+def member_from_ctx(ctx):
+	member = ctx.message.author
+	if type(ctx.message.author).__name__ is "User":
+		member = ctx.message.server.get_member(ctx.message.author.id)
+		if member == None:
+			yield from bot.say("this server doesn't see you as a member :/")
+			return None
+
+	return member
 
 @asyncio.coroutine
 def be_jianyang(msg):
@@ -64,32 +80,15 @@ def toggle_jianyang(ctx):
 
 @bot.command(pass_context=True)
 @asyncio.coroutine
-def sound(ctx, file : str):
-	filename = "recording/{0}.mp3".format(file)
-	if not os.path.exists(filename):
-		yield from bot.say(file + ".mp3 is not a recording file")
-	else:
-		yield from join_vchan.callback(ctx)
-
-		server_id = ctx.message.author.server.id
-
-		server_sounds[server_id].sound_sys.play(filename)
-
-@bot.command(pass_context=True)
-@asyncio.coroutine
 def join_vchan(ctx):
 	global server_sounds
 
-	if type(ctx.message.author).__name__ is "User":
-		member = ctx.message.server.get_member(ctx.message.author.id)
-		if member == None:
-			yield from bot.say("the server doesn't see you as a member :\\")
-			return False
-		chan = member.voice_channel
-		server_id = member.server.id
-	else:
-		chan = ctx.message.author.voice_channel
-		server_id = ctx.message.author.server.id
+	member = yield from member_from_ctx(ctx)
+	if member == None:
+		return False
+
+	chan = member.voice_channel
+	server_id = ctx.message.author.server.id
 
 	if chan is None:
 		yield from bot.say("please join a voice channel before asking me to join one with you")
@@ -105,7 +104,33 @@ def join_vchan(ctx):
 
 @bot.command(pass_context=True)
 @asyncio.coroutine
-def stop(ctx):
+def next_sound(ctx):
+	member = yield from member_from_ctx(ctx)
+	if member == None:
+		return False
+	elif not member.server.id in server_sounds:
+		yield from bot.say("the bot isn't in a voice channel on this server")
+		return False
+
+	server_sounds[member.server.id].sound_sys.next_in_queue()
+
+@bot.command(pass_context=True)
+@asyncio.coroutine
+def sound(ctx, file : str):
+	filename = "recording/{0}.mp3".format(file)
+	if not os.path.exists(filename):
+		yield from bot.say(file + ".mp3 is not a recording file")
+	else:
+		yield from join_vchan.callback(ctx)
+
+		server_id = ctx.message.author.server.id
+
+		server_sounds[server_id].sound_sys.play(filename)
+
+
+@bot.command(pass_context=True)
+@asyncio.coroutine
+def stopbot(ctx):
 	if ctx.message.author.id == MY_ID:
 		sys.exit()
 	else:
@@ -120,10 +145,7 @@ def say(ctx, words, args=""):
 	parsed_args = yield from tts.parse_args(args)
 	filename = tts.make_tts_file(words, parsed_args, server_id)
 
-	def delete_file():
-		os.remove(filename)
-
-	server_sounds[server_id].sound_sys.play(filename, custom_after=delete_file)
+	server_sounds[server_id].sound_sys.play(filename)
 
 @bot.command()
 @asyncio.coroutine

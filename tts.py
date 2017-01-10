@@ -9,9 +9,11 @@ def make_tts_file(words, parsed_args, server_id):
 		os.makedirs("./tts_audio/"+server_id)
 		filenum = 0
 	else:
-		filenum = len([name for name in os.listdir("./tts_audio/"+server_id) if os.path.isfile(name)])
+		filenum = len([name for name in os.listdir("./tts_audio/"+server_id) if os.path.isfile("./tts_audio/{0}/{1}".format(server_id, name))])
 
 	filename = "tts_audio/{0}/tts{1}.mp3".format(server_id, filenum)
+
+	print("tts filename "+filename)
 
 	lang = parsed_args["lang"]
 	reverse = parsed_args["reverse"]
