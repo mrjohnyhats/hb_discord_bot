@@ -3,11 +3,13 @@ from riotwatcher import LoLException
 from discord.ext import commands
 from gtts import gTTS
 from sound_system import Sound_system
-import riotwatcher, discord, asyncio, random, os, sys, pydub, re, tts
+import riotwatcher, discord, asyncio, random, os, sys, pydub, re, tts, urllib, magic
 
 league = League()
 
 bot = commands.Bot(command_prefix="$", description="a bot that executes commands sometimes")
+
+file_classifier = magic.Magic(mime=True)
 
 MY_ID = "171332734130716673"
 PRANAV_ID = "171332734130716673"
@@ -64,6 +66,26 @@ def on_ready():
 	print("ready!")
 	yield from bot.change_presence(game=discord.Game(name="with his penis"))
 
+
+@bot.command()
+@asyncio.coroutine
+def download_sound(link, name):
+	filename = name+".mp3"
+	dirname = "./recording/"+filename
+	sound_names = os.listdir("./recording")
+	if filename in sound_names:
+		yield from bot.say(name + ".mp3 is already a sound file :/")
+		return False
+
+	urllib.request.urlretrieve(link, dirname)
+	ftype = file_classifier.from_file(dirname)
+
+	if not "audio" in ftype:
+		yield from bot.say("not an audio file")
+		os.remove(dirname)
+		return False
+
+	yield from bot.say(filename + " added to sounds, play with '$sound "+name+"'")
 
 @bot.command(pass_context=True)
 @asyncio.coroutine
