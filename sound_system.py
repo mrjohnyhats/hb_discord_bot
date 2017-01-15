@@ -15,8 +15,10 @@ class Sound_system:
 			else:
 				raise TypeError("'after_queue' argument must be callable")
 
-	def add_to_queue(self, player):
+	def queue_player(self, player):
 		self.queue.append(player)
+		if not self.playing:
+			self.play_if_enqueued()
 
 	def play_if_enqueued(self):
 		if len(self.queue) > 0:
@@ -43,8 +45,17 @@ class Sound_system:
 			raise FileNotFoundError("soundfile does not exist")
 
 		self.add_to_queue(player)
-		if not self.playing:
-			self.play_if_enqueued()
+
+	def yt_play(self, query, custom_after=None):
+		if custom_after == None:
+			after = self.play_if_enqueued
+		else:
+			def after():
+				custom_after()
+				self.play_if_enqueued()
+
+		player = self.voice_client.create_ytdl_player(query, after=after, ytdl_options=None)
+		self.add_to_queue(player)
 
 	def next_in_queue(self):
 		if self.playing:
