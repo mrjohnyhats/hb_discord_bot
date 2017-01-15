@@ -67,6 +67,7 @@ def on_ready():
 	yield from bot.change_presence(game=discord.Game(name="with his penis"))
 
 
+
 @bot.command()
 @asyncio.coroutine
 def download_sound(link, name):
@@ -86,6 +87,23 @@ def download_sound(link, name):
 		return False
 
 	yield from bot.say(filename + " added to sounds, play with '$sound "+name+"'")
+
+@bot.command(pass_context=True)
+@asyncio.coroutine
+def yt_sound(ctx, query):
+	yield from join_vchan.callback(ctx)
+	server_id = ctx.message.author.server.id
+	yield from server_sounds[server_id].sound_sys.yt_play(query)
+
+@bot.command(pass_context=True)
+@asyncio.coroutine
+def stop_sounds(ctx):
+	member = yield from member_from_ctx(ctx)
+	server_id = member.server.id
+	if server_id in server_sounds:
+		server_sounds[server_id].sound_sys.stop()
+	else:
+		yield from bot.say("bot isn't in a voice channel in your server")
 
 @bot.command(pass_context=True)
 @asyncio.coroutine
@@ -148,7 +166,6 @@ def sound(ctx, file : str):
 		server_id = ctx.message.author.server.id
 
 		server_sounds[server_id].sound_sys.play(filename)
-
 
 @bot.command(pass_context=True)
 @asyncio.coroutine
