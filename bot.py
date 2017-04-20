@@ -64,7 +64,7 @@ bot.is_jianyang = False
 @asyncio.coroutine
 def on_ready():
 	print("ready!")
-	yield from bot.change_presence(game=discord.Game(name="with his penis"))
+	yield from bot.change_presence(game=discord.Game(name="Pornhub"))
 
 
 

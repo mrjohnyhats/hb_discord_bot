@@ -40,7 +40,7 @@ class Sound_system:
 					custom_after()
 					self.play_if_enqueued()
 
-			player = self.voice_client.create_ffmpeg_player(soundfile, after=after)
+			player = self.voice_client.create_ffmpeg_player(soundfile, after=after, use_avconv=True)
 		else:
 			raise FileNotFoundError("soundfile does not exist")
 
@@ -61,7 +61,7 @@ class Sound_system:
 		opts = {
 			"default_search": "auto"
 		}
-		player = yield from self.voice_client.create_ytdl_player(query, after=after, ytdl_options=opts)
+		player = yield from self.voice_client.create_ytdl_player(query, after=after, ytdl_options=opts, use_avconv=True)
 		self.queue_player(player)
 
 	def next_in_queue(self):

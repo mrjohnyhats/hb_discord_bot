@@ -1,0 +1,38 @@
+[youtube] zCDtSu0ZLyc: Downloading webpage
+ready!
+[youtube] zCDtSu0ZLyc: Downloading video info webpage
+[youtube] zCDtSu0ZLyc: Extracting video information
+[youtube] zCDtSu0ZLyc: Downloading MPD manifest
+[youtube] zCDtSu0ZLyc: Downloading MPD manifest
+Ignoring exception in command saysound
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.4/dist-packages/discord/ext/commands/core.py", line 50, in wrapped
+    ret = yield from coro(*args, **kwargs)
+  File "bot.py", line 187, in saysound
+    server_sounds[server_id].sound_sys.play(filename)
+  File "/home/pi/hn_discord_bot/sound_system.py", line 45, in play
+    raise FileNotFoundError("soundfile does not exist")
+FileNotFoundError: soundfile does not exist
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.4/dist-packages/discord/ext/commands/bot.py", line 846, in process_commands
+    yield from command.invoke(ctx)
+  File "/usr/local/lib/python3.4/dist-packages/discord/ext/commands/core.py", line 374, in invoke
+    yield from injected(*ctx.args, **ctx.kwargs)
+  File "/usr/local/lib/python3.4/dist-packages/discord/ext/commands/core.py", line 54, in wrapped
+    raise CommandInvokeError(e) from e
+discord.ext.commands.errors.CommandInvokeError: Command raised an exception: FileNotFoundError: soundfile does not exist
+Task exception was never retrieved
+future: <Task finished coro=<poll_voice_ws() done, defined at /usr/local/lib/python3.4/dist-packages/discord/voice_client.py:269> exception=TimeoutError()>
+Traceback (most recent call last):
+  File "/usr/lib/python3.4/asyncio/tasks.py", line 237, in _step
+    result = next(coro)
+  File "/usr/local/lib/python3.4/dist-packages/discord/voice_client.py", line 276, in poll_voice_ws
+    yield from self.ws.poll_event()
+  File "/usr/local/lib/python3.4/dist-packages/discord/gateway.py", line 635, in poll_event
+    msg = yield from asyncio.wait_for(self.recv(), timeout=30.0, loop=self.loop)
+  File "/usr/lib/python3.4/asyncio/tasks.py", line 376, in wait_for
+    raise futures.TimeoutError()
+concurrent.futures._base.TimeoutError
